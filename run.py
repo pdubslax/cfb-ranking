@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 import urllib2
 import operator
+from random import randint
+import copy
 
 from difflib import SequenceMatcher
 
@@ -227,7 +229,7 @@ ranking = 1
 for (a,b) in sorted_x:
 	print str(ranking) +'. '+a
 	ranking+=1
-	if ranking==5:
+	if ranking==7:
 		break
 
 fbiRankAccuracy = rankingAccuracy(pageRankFormat,fbiRankings)
@@ -253,7 +255,7 @@ ranking = 1
 for (a,b) in sorted_x:
 	print str(ranking) +'. '+a
 	ranking+=1
-	if ranking==5:
+	if ranking==7:
 		break
 
 twinsRankAccuracy = rankingAccuracy(pageRankFormat,ranking1)
@@ -262,17 +264,102 @@ print 'Accuracy: ' + str(twinsRankAccuracy)
 print
 print 'PageRank Ranking'
 ranking2,numIter = pagerank(pageRankFormat)
-sorted_x = sorted(ranking2.items(), key=operator.itemgetter(1), reverse=True)
+sorted_pr = sorted(ranking2.items(), key=operator.itemgetter(1), reverse=True)
 ranking = 1
-for (a,b) in sorted_x:
+for (a,b) in sorted_pr:
 	print str(ranking) +'. '+a
 	ranking+=1
-	if ranking==5:
+	if ranking==7:
 		break
 
 pageRankAccuracy = rankingAccuracy(pageRankFormat,ranking2)
 
 
 print 'Accuracy: ' + str(pageRankAccuracy)
+
+teamList = []
+for team in ranking1.keys():
+	teamList.append(team)
+
+curMax = rankingAccuracy(pageRankFormat,ranking1)
+for i in range(10000):
+	rankingTest = copy.deepcopy(ranking1)
+	team1 = teamList[randint(0,len(teamList)-1)]
+	team2 = teamList[randint(0,len(teamList)-1)]
+	temp = rankingTest[team1]
+	rankingTest[team1] = rankingTest[team2]
+	rankingTest[team2] = temp
+	twinsRankAccuracy = rankingAccuracy(pageRankFormat,rankingTest)
+	if twinsRankAccuracy > curMax:
+		curMax = twinsRankAccuracy
+		ranking1 = rankingTest
+		# print curMax
+
+print
+print 'Genetic Algo for Minimizing Upsets'
+sorted_x = sorted(ranking1.items(), key=operator.itemgetter(1), reverse=True)
+ranking = 1
+for (a,b) in sorted_x:
+	print str(ranking) +'. '+a
+	ranking+=1
+	if ranking==7:
+		break
+
+twinsRankAccuracy = rankingAccuracy(pageRankFormat,ranking1)
+print 'Accuracy: ' + str(twinsRankAccuracy)
+
+teamList = []
+for index in range(len(sorted_x)):
+	realIndex = len(sorted_x)-index-1
+	# print realIndex
+	(a,b) = sorted_x[realIndex]
+	teamList.append(a)
+
+reverse = sorted(ranking1.items(), key=operator.itemgetter(1), reverse=False)
+index = 0
+curMax = rankingAccuracy(pageRankFormat,ranking1)
+for y in range(len(teamList)):
+	upperIndex = len(teamList)-y-1
+	lowerIndex = upperIndex+1
+	for x in range(y):
+		rankingTest = copy.deepcopy(ranking1)
+		
+		team1 = teamList[upperIndex]
+		team2 = teamList[lowerIndex]
+
+		# print team1,team2
+
+		temp = rankingTest[team1]
+		rankingTest[team1] = rankingTest[team2]
+		rankingTest[team2] = temp
+		twinsRankAccuracy = rankingAccuracy(pageRankFormat,rankingTest)
+		if twinsRankAccuracy > curMax:
+			curMax = twinsRankAccuracy
+			ranking1 = rankingTest
+			teamList[upperIndex] = team2
+			teamList[lowerIndex] = team1
+			lowerIndex+=1
+			# print curMax
+		else:
+			lowerIndex+=1
+			
+		# print team1,team2
+	# print y
+
+
+	index += 1
+
+print
+print 'Bubble Sort Genetic Variation for Minimizing Upsets'
+sorted_x = sorted(ranking1.items(), key=operator.itemgetter(1), reverse=True)
+ranking = 1
+for (a,b) in sorted_x:
+	print str(ranking) +'. '+a
+	ranking+=1
+	if ranking==7:
+		break
+
+bbsRankAccuracy = rankingAccuracy(pageRankFormat,ranking1)
+print 'Accuracy: ' + str(bbsRankAccuracy)
 
 
