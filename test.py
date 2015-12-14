@@ -34,12 +34,28 @@ def rankingAccuracy(actual,ranking):
 		total += 1
 	return correct/total
 
+def adjustedRankingAccuracy(actual,ranking,n,reverseParam):
+	sorted_x = sorted(ranking.items(), key=operator.itemgetter(1), reverse=reverseParam)
+	sortedList = []
+	for (a,b) in sorted_x:
+		sortedList.append(a)
+	correct = 0.0
+	total = 0.0
+	for tail_node, head_node in actual:
+		if tail_node in ranking and head_node in ranking and (sortedList.index(tail_node) < n or sortedList.index(head_node) < n):
+			if tail_node not in ranking or head_node not in ranking:
+				correct += 1
+			elif (ranking[tail_node]<ranking[head_node]):
+				correct += 1
+			total += 1
+	return correct/total
+
 def populateDicsForWeek(week):
 	url = "http://www.sports-reference.com/cfb/years/2015-schedule.html"  # change to whatever your url is
 	url2 = "http://espn.go.com/college-football/statistics/teamratings/_/year/2015/key/"
 	weekArray = ['20150907040000','20150914040000','20150921040000','20150928040000','20151005040000','20151012040000','20151019040000','20151026040000','20151102040000','20151109040000','20151116040000','20151123040000','20151130040000','20151207040000','20151213040000']
 	if week < len(weekArray):
-		url2 = url2 + weekArray[week]
+		url2 = url2 + weekArray[week-1]
 	else:
 		url2 = url2 + weekArray[len(weekArray)-1]
 
@@ -160,7 +176,7 @@ def populateDicsForWeek(week):
 			team2 = str(result.lstrip())
 
 			team2Score = int(tds[9].text)
-
+			# print team2Score
 			if team1Score > team2Score:
 				if team1 not in recordDic:
 					recordDic[team1] = {}
@@ -247,14 +263,15 @@ def correctWeekListBuild(nextWeeksGames):
 			games.append((dic['team2'],dic['winner']))
 	return games
 
-def printTop(ranking,n,reverseParam):
+def printTop(ranking,n,reverseParam,d1):
 	sorted_x = sorted(ranking.items(), key=operator.itemgetter(1), reverse=reverseParam)
 	ranking = 1
 	for (a,b) in sorted_x:
-		print str(ranking) +'. '+a
-		ranking+=1
-		if ranking==n+1:
-			break
+		if a in d1:
+			print str(ranking) +'. '+a
+			ranking+=1
+			if ranking==n+1:
+				break
 
 def pagerank(graph, damping=0.85, epsilon=1.0e-8):
     inlink_map = {}
@@ -295,31 +312,65 @@ def pagerank(graph, damping=0.85, epsilon=1.0e-8):
         n_iterations += 1
     
     return ranks, n_iterations
+
+def masterRanking(startingPointRanking,pageRankFormat):
+	teamList = []
+	for team in startingPointRanking.keys():
+		teamList.append(team)
+
+	curMax = rankingAccuracy(pageRankFormat,startingPointRanking)
+	for i in range(10000):
+		rankingTest = copy.deepcopy(startingPointRanking)
+		team1 = teamList[randint(0,len(teamList)-1)]
+		team2 = teamList[randint(0,len(teamList)-1)]
+		temp = rankingTest[team1]
+		rankingTest[team1] = rankingTest[team2]
+		rankingTest[team2] = temp
+		twinsRankAccuracy = rankingAccuracy(pageRankFormat,rankingTest)
+		if twinsRankAccuracy > curMax:
+			curMax = twinsRankAccuracy
+			startingPointRanking = rankingTest
+			# print curMax
+			# print curMax
+
+	return startingPointRanking
 			
 
 def main():
 	# my code here
 	 
-	for index in range(14):
+	for index in range(1,14):
 		recordDic, nextWeeksGames, results, fpiRankings = populateDicsForWeek(index)
 		twinsRank = TWINSRanking(recordDic)
 		pageRank, iters = pagerank(results)
+		bestRank = masterRanking(twinsRank,results)
 		# print pageRank
-		# printTop(twinsRank,10)
+		printTop(bestRank,10,True,fpiRankings)
+		if (index == 14):
+			gameEvalList = results
 		gameEvalList = correctWeekListBuild(nextWeeksGames)
-		twinsRankAccuracy = rankingAccuracy(gameEvalList,twinsRank)
-		pageRankAccuracy = rankingAccuracy(gameEvalList,pageRank)
-		fpiAccuracy = rankingAccuracy(gameEvalList,fpiRankings)
-		print 'Week ' + str(index+1) + ' TWINs Accuracy: '+ str(twinsRankAccuracy)
-		print 'Week ' + str(index+1) + ' PageRank Accuracy: '+ str(pageRankAccuracy)		
-		print 'Week ' + str(index+1) + ' FPI Accuracy: '+ str(fpiAccuracy)
 
-		print
-	
+		# twinsRankAccuracy = rankingAccuracy(gameEvalList,twinsRank)
+		# pageRankAccuracy = rankingAccuracy(gameEvalList,pageRank)
+		# fpiAccuracy = rankingAccuracy(gameEvalList,fpiRankings)
+		# bestAccuracy = rankingAccuracy(gameEvalList,bestRank)
 
-	recordDic, nextWeeksGames,results, fpiRankings = populateDicsForWeek(15)
-	twinsRankAccuracy = rankingAccuracy(results,twinsRank)
-	print twinsRankAccuracy
+		twinsRankAccuracy = adjustedRankingAccuracy(gameEvalList,twinsRank,50,True)
+		pageRankAccuracy = adjustedRankingAccuracy(gameEvalList,pageRank,50,True)
+		fpiAccuracy = adjustedRankingAccuracy(gameEvalList,fpiRankings,50,True)
+		bestAccuracy = adjustedRankingAccuracy(gameEvalList,bestRank,50,True)
+
+		twinsRankAccuracy2 = rankingAccuracy(results,twinsRank)
+		pageRankAccuracy2 = rankingAccuracy(results,pageRank)
+		fpiAccuracy2 = rankingAccuracy(results,fpiRankings)
+		bestAccuracy2 = rankingAccuracy(results,bestRank)
+
+
+
+		print 'Week ' + str(index) + ' TWINs Accuracy: '+ str(twinsRankAccuracy) + ' from ' + str(twinsRankAccuracy2)
+		print 'Week ' + str(index) + ' PageRank Accuracy: '+ str(pageRankAccuracy) + ' from ' + str(pageRankAccuracy2)		
+		print 'Week ' + str(index) + ' My Best Accuracy: '+ str(bestAccuracy) + ' from ' + str(bestAccuracy2)
+		print 'Week ' + str(index) + ' FPI Accuracy: '+ str(fpiAccuracy) + ' from ' + str(fpiAccuracy2)
 
 
 
