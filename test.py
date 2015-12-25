@@ -34,6 +34,22 @@ def rankingAccuracy(actual,ranking):
 		total += 1
 	return correct/total
 
+def seasonRankingAccuracy(actual,ranking,n,reverseParam):
+	sorted_x = sorted(ranking.items(), key=operator.itemgetter(1), reverse=reverseParam)
+	sortedList = []
+	for (a,b) in sorted_x:
+		sortedList.append(a)
+	correct = 0.0
+	total = 0.0
+	for tail_node, head_node in actual:
+		if tail_node in ranking and head_node in ranking and (sortedList.index(tail_node) < n or sortedList.index(head_node) < n):
+			if tail_node not in ranking or head_node not in ranking:
+				correct += 1
+			elif (ranking[tail_node]<ranking[head_node]):
+				correct += 1
+			total += 1
+	return correct,total
+
 def adjustedRankingAccuracy(actual,ranking,n,reverseParam):
 	sorted_x = sorted(ranking.items(), key=operator.itemgetter(1), reverse=reverseParam)
 	sortedList = []
@@ -338,8 +354,9 @@ def masterRanking(startingPointRanking,pageRankFormat):
 
 def main():
 	# my code here
-	 
-	for index in range(1,14):
+	totalPlayed = 0.0
+	totalCorrect = 0.0
+	for index in range(5,14):
 		recordDic, nextWeeksGames, results, fpiRankings = populateDicsForWeek(index)
 		twinsRank = TWINSRanking(recordDic)
 		pageRank, iters = pagerank(results)
@@ -364,14 +381,17 @@ def main():
 		pageRankAccuracy2 = rankingAccuracy(results,pageRank)
 		fpiAccuracy2 = rankingAccuracy(results,fpiRankings)
 		bestAccuracy2 = rankingAccuracy(results,bestRank)
-
+		cor,tot = seasonRankingAccuracy(gameEvalList,bestRank,50,True)
+		totalPlayed += tot
+		totalCorrect += cor
 
 
 		print 'Week ' + str(index) + ' TWINs Accuracy: '+ str(twinsRankAccuracy) + ' from ' + str(twinsRankAccuracy2)
 		print 'Week ' + str(index) + ' PageRank Accuracy: '+ str(pageRankAccuracy) + ' from ' + str(pageRankAccuracy2)		
 		print 'Week ' + str(index) + ' My Best Accuracy: '+ str(bestAccuracy) + ' from ' + str(bestAccuracy2)
 		print 'Week ' + str(index) + ' FPI Accuracy: '+ str(fpiAccuracy) + ' from ' + str(fpiAccuracy2)
-
+	print totalPlayed,totalCorrect
+	print totalCorrect/totalPlayed
 
 
 if __name__ == "__main__":
